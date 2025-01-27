@@ -1,0 +1,117 @@
+<app-layout>
+  <table class="table-auto w-full font-mono font-light">
+    <thead class="text-gray-500 border-b border-b-slate-200">
+      <tr>
+        <td class="px-4 py-2 whitespace-nowrap">#</td>
+        <td
+          *ngFor="let column of tableHeaderColumns"
+          class="px-4 py-2 whitespace-nowrap"
+        >
+          {{ column }}
+        </td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let item of items; let i = index"
+        class="hover:bg-slate-100 border-b border-b-slate-100"
+      >
+        <td class="px-4 py-2 whitespace-nowrap">
+          {{ i + 1 }}
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap group relative">
+          {{ item.privateKey }}
+          <button
+            (click)="copyToClipboard(item.privateKey)"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap group relative">
+          <a
+            href="https://www.blockchain.com/btc/address/{{item.addressUnCompressed}}"
+            target="_blank"
+            class="text-blue-500 hover:text-blue-900 hover:underline"
+          >{{ item.addressUnCompressed }}</a>
+          <button
+            (click)="copyToClipboard(item.addressUnCompressed)"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td
+          class="px-4 py-2 whitespace-nowrap group relative"
+          [ngClass]="getBalanceClass(item.addressUnCompressedBalance)"
+        >
+          {{ item.addressUnCompressedBalance | balance }}
+          <button
+            (click)="copyToClipboard(item.addressUnCompressedBalance?.toString() || '0')"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td
+          class="px-4 py-2 whitespace-nowrap group relative"
+          [ngClass]="getBalanceClass(item.addressUnCompressedReceived)"
+        >
+          {{ item.addressUnCompressedReceived | balance }}
+          <button
+            (click)="copyToClipboard(item.addressUnCompressedReceived?.toString() || '0')"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap group relative">
+          <a
+            href="https://www.blockchain.com/btc/address/{{item.addressCompressed}}"
+            target="_blank"
+            class="text-blue-500 hover:text-blue-900 hover:underline"
+          >{{ item.addressCompressed }}</a>
+          <button
+            (click)="copyToClipboard(item.addressCompressed)"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td
+          class="px-4 py-2 whitespace-nowrap group relative"
+          [ngClass]="getBalanceClass(item.addressCompressedBalance)"
+        >
+          {{ item.addressCompressedBalance | balance }}
+          <button
+            (click)="copyToClipboard(item.addressCompressedBalance?.toString() || '0')"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+        <td
+          class="px-4 py-2 whitespace-nowrap group relative"
+          [ngClass]="getBalanceClass(item.addressCompressedReceived)"
+        >
+          {{ item.addressCompressedReceived | balance }}
+          <button
+            (click)="copyToClipboard(item.addressCompressedReceived?.toString() || '0')"
+            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
+            title="Copy to clipboard"
+          >📋</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="flex justify-between p-4">
+    <button
+      (click)="onOlder()"
+      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded"
+    >
+      ← Older
+    </button>
+    <div>{{ page.toString() }} of {{ maxPage.toString() }}</div>
+    <button
+      (click)="onNewer()"
+      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded"
+    >
+      Newer →
+    </button>
+  </div>
+</app-layout>
