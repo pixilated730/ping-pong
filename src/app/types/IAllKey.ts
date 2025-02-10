@@ -1,10 +1,14 @@
+// src/app/types/IAllKey.ts
 export interface IAllKey {
-  id: string;
   privateKey: string;
   addressUnCompressed: string;
-  addressUnCompressedBalance: number | null;
-  addressUnCompressedReceived: number | null;
   addressCompressed: string;
-  addressCompressedBalance: number | null;
-  addressCompressedReceived: number | null;
+  addressUnCompressedBalance: number;
+  addressUnCompressedConfirmed: number;
+  addressUnCompressedUnconfirmed: number;
+  addressUnCompressedHasTransactions: boolean;
+  addressCompressedBalance: number;
+  addressCompressedConfirmed: number;
+  addressCompressedUnconfirmed: number;
+  addressCompressedHasTransactions: boolean;
 }

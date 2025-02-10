@@ -1,4 +1,12 @@
+<!-- src/app/pages/home/home.component.html -->
 <app-layout>
+  <!-- Total Balance Display -->
+  <div class="mb-4 p-4 bg-white rounded shadow-sm border border-slate-200">
+    <div class="text-lg font-medium text-slate-900">
+      Total Page Balance: {{ totalBalance | balance }} BTC
+    </div>
+  </div>
+
   <table class="table-auto w-full font-mono font-light">
     <thead class="text-gray-500 border-b border-b-slate-200">
       <tr>
@@ -13,14 +21,14 @@
     </thead>
     <tbody>
       <tr
-        *ngFor="let item of items; let i = index"
+        *ngFor="let item of processedItems; let i = index"
         class="hover:bg-slate-100 border-b border-b-slate-100"
       >
         <td class="px-4 py-2 whitespace-nowrap">
           {{ i + 1 }}
         </td>
         <td class="px-4 py-2 whitespace-nowrap group relative">
-          {{ item.privateKey }}
+          <span class="font-mono select-all">{{ item.privateKey }}</span>
           <button
             (click)="copyToClipboard(item.privateKey)"
             class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
@@ -29,10 +37,13 @@
         </td>
         <td class="px-4 py-2 whitespace-nowrap group relative">
           <a
-            href="https://www.blockchain.com/btc/address/{{item.addressUnCompressed}}"
+            href="https://mempool.cakewallet.com/api/address/{{item.addressUnCompressed}}"
             target="_blank"
-            class="text-blue-500 hover:text-blue-900 hover:underline"
-          >{{ item.addressUnCompressed }}</a>
+            rel="noopener noreferrer"
+            class="text-blue-500 hover:text-blue-900 hover:underline font-mono select-all"
+          >
+            {{ item.addressUnCompressed }}
+          </a>
           <button
             (click)="copyToClipboard(item.addressUnCompressed)"
             class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
@@ -43,30 +54,35 @@
           class="px-4 py-2 whitespace-nowrap group relative"
           [ngClass]="getBalanceClass(item.addressUnCompressedBalance)"
         >
-          {{ item.addressUnCompressedBalance | balance }}
+          <span class="font-mono select-all">{{ item.addressUnCompressedBalance | balance }}</span>
+          <span
+            *ngIf="(item.addressUnCompressedUnconfirmed || 0) > 0"
+            class="ml-1 text-yellow-600 text-sm"
+          >
+            ({{ item.addressUnCompressedUnconfirmed | balance }} unconfirmed)
+          </span>
           <button
-            (click)="copyToClipboard(item.addressUnCompressedBalance?.toString() || '0')"
+            *ngIf="(item.addressUnCompressedBalance || 0) > 0"
+            (click)="copyToClipboard((item.addressUnCompressedBalance || 0).toString())"
             class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
             title="Copy to clipboard"
           >📋</button>
         </td>
         <td
           class="px-4 py-2 whitespace-nowrap group relative"
-          [ngClass]="getBalanceClass(item.addressUnCompressedReceived)"
+          [ngClass]="getTransactionClass(item.addressUnCompressedHasTransactions)"
         >
-          {{ item.addressUnCompressedReceived | balance }}
-          <button
-            (click)="copyToClipboard(item.addressUnCompressedReceived?.toString() || '0')"
-            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
-            title="Copy to clipboard"
-          >📋</button>
+          {{ item.addressUnCompressedHasTransactions ? '✅' : '❌' }}
         </td>
         <td class="px-4 py-2 whitespace-nowrap group relative">
           <a
-            href="https://www.blockchain.com/btc/address/{{item.addressCompressed}}"
+            href="https://mempool.cakewallet.com/api/address/{{item.addressCompressed}}"
             target="_blank"
-            class="text-blue-500 hover:text-blue-900 hover:underline"
-          >{{ item.addressCompressed }}</a>
+            rel="noopener noreferrer"
+            class="text-blue-500 hover:text-blue-900 hover:underline font-mono select-all"
+          >
+            {{ item.addressCompressed }}
+          </a>
           <button
             (click)="copyToClipboard(item.addressCompressed)"
             class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
@@ -77,23 +93,25 @@
           class="px-4 py-2 whitespace-nowrap group relative"
           [ngClass]="getBalanceClass(item.addressCompressedBalance)"
         >
-          {{ item.addressCompressedBalance | balance }}
+          <span class="font-mono select-all">{{ item.addressCompressedBalance | balance }}</span>
+          <span
+            *ngIf="(item.addressCompressedUnconfirmed || 0) > 0"
+            class="ml-1 text-yellow-600 text-sm"
+          >
+            ({{ item.addressCompressedUnconfirmed | balance }} unconfirmed)
+          </span>
           <button
-            (click)="copyToClipboard(item.addressCompressedBalance?.toString() || '0')"
+            *ngIf="(item.addressCompressedBalance || 0) > 0"
+            (click)="copyToClipboard((item.addressCompressedBalance || 0).toString())"
             class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
             title="Copy to clipboard"
           >📋</button>
         </td>
         <td
           class="px-4 py-2 whitespace-nowrap group relative"
-          [ngClass]="getBalanceClass(item.addressCompressedReceived)"
+          [ngClass]="getTransactionClass(item.addressCompressedHasTransactions)"
         >
-          {{ item.addressCompressedReceived | balance }}
-          <button
-            (click)="copyToClipboard(item.addressCompressedReceived?.toString() || '0')"
-            class="ml-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700"
-            title="Copy to clipboard"
-          >📋</button>
+          {{ item.addressCompressedHasTransactions ? '✅' : '❌' }}
         </td>
       </tr>
     </tbody>
@@ -102,16 +120,79 @@
   <div class="flex justify-between p-4">
     <button
       (click)="onOlder()"
-      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded"
+      [disabled]="isFirstPage || isLoadingResults"
+      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
     >
       ← Older
     </button>
-    <div>{{ page.toString() }} of {{ maxPage.toString() }}</div>
+    <div class="flex items-center">
+      <span class="text-slate-600">{{ getPageDisplay() }}</span>
+    </div>
     <button
       (click)="onNewer()"
-      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded"
+      [disabled]="isLastPage || isLoadingResults"
+      class="border border-b-slate-200 hover:bg-slate-100 px-4 py-2 whitespace-nowrap focus:ring-2 focus:ring-slate-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
     >
       Newer →
     </button>
+  </div>
+
+  <!-- Enhanced Loading Overlay -->
+  <div
+    *ngIf="isLoadingResults"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+      <div class="text-lg mb-4 text-slate-800">{{ getProgressStatus() }}</div>
+
+      <!-- Overall Progress -->
+      <div class="space-y-1 mb-4">
+        <div class="text-sm text-slate-600">Overall Progress</div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+            [style.width.%]="totalProgress"
+          ></div>
+        </div>
+        <div class="text-right text-sm text-slate-600">
+          {{ totalProgress.toFixed(1) }}%
+        </div>
+      </div>
+
+      <!-- Batch Progress -->
+      <div class="space-y-1" *ngIf="shouldShowBatchProgress()">
+        <div class="text-sm text-slate-600">Current Batch</div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            class="bg-green-500 h-2.5 rounded-full transition-all duration-300"
+            [style.width.%]="batchProgress"
+          ></div>
+        </div>
+        <div class="text-right text-sm text-slate-600">
+          {{ batchProgress.toFixed(1) }}%
+        </div>
+      </div>
+
+      <!-- Found Addresses Count -->
+      <div class="mt-4 text-sm text-slate-600">
+        Found {{ foundAddresses }} addresses with activity
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Error Message -->
+  <div
+    *ngIf="isError"
+    class="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg max-w-md"
+  >
+    <div class="flex items-center">
+      <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <div class="font-medium">Error loading data</div>
+        <div class="text-sm mt-1">Please try refreshing the page or try again later.</div>
+      </div>
+    </div>
   </div>
 </app-layout>

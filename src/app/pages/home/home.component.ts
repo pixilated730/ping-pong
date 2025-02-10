@@ -1,58 +1,89 @@
-import { Component, OnInit } from '@angular/core';
+// src/app/pages/home/home.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AllKeyService } from 'src/app/services/all-key.service';
-import { BalanceService } from 'src/app/services/balance.service';
-import { IAllKey } from 'src/app/types/IAllKey';
-import { IBlockchain } from 'src/app/types/IBlockchain';
+import { AllKeyService } from '../../services/all-key.service';
+import { IAllKey } from '../../types/IAllKey';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrls: ['./home.component.css'],
+  templateUrl: './home.component.html'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   tableHeaderColumns: string[] = [
     'privateKey',
     'address',
     'balance',
-    'received',
+    'transactions',
     'compressed',
     'balance',
-    'received',
+    'transactions',
   ];
 
   items: IAllKey[] = [];
-  maxNumber = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140n; // secp256k1_n - 1
-
+  processedItems: IAllKey[] = [];
+  maxNumber = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140n;
   page = 1n;
-  limitPerPage = 226;
+  limitPerPage = 4000;
   maxPage = this.maxNumber / BigInt(this.limitPerPage);
+  totalBalance = 0;
 
   isLoadingResults = true;
   isError = false;
 
+  batchProgress = 0;
+  totalProgress = 0;
+  foundAddresses = 0;
+
+  private subscriptions: Subscription[] = [];
+
+  get isFirstPage(): boolean {
+    return this.page === 1n;
+  }
+
+  get isLastPage(): boolean {
+    return this.page >= this.maxPage;
+  }
+
   constructor(
     private allKeyService: AllKeyService,
     private route: ActivatedRoute,
-    private router: Router,
-    private balanceService: BalanceService
-  ) {}
+    private router: Router
+  ) {
+    // Subscribe to progress updates
+    this.subscriptions.push(
+      this.allKeyService.getProgress().subscribe(progress => {
+        this.totalProgress = progress;
+      })
+    );
+
+    this.subscriptions.push(
+      this.allKeyService.getBatchProgress().subscribe(progress => {
+        this.batchProgress = progress;
+      })
+    );
+  }
 
   ngOnInit() {
     this.route.queryParamMap.subscribe((params) => {
-      this.page = BigInt(params.get('page') || '1');
+      const pageParam = params.get('page') || '1';
+      this.page = BigInt(pageParam);
       this.getData();
     });
   }
 
-  getRowNumber(index: number): string {
-    return ((this.page - 1n) * BigInt(this.limitPerPage) + BigInt(index + 1)).toString();
+  ngOnDestroy() {
+    // Clean up subscriptions
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  getPageDisplay(): string {
+    return `${this.page.toString()} of ${this.maxPage.toString()}`;
   }
 
   onOlder() {
     this.page = this.page - 1n;
-    if (this.page === 0n) {
+    if (this.page <= 0n) {
       this.page = 1n;
     }
     this.router.navigate(['/home'], { queryParams: { page: this.page.toString() } });
@@ -67,76 +98,93 @@ export class HomeComponent implements OnInit {
   }
 
   async getData() {
-    this.isLoadingResults = true;
-    const items = this.allKeyService.getData(this.page, this.limitPerPage);
-    this.items = items;
+    try {
+      this.isLoadingResults = true;
+      this.isError = false;
+      this.processedItems = [];
+      this.foundAddresses = 0;
+      this.totalBalance = 0;
 
-    const addresses: string[] = [];
-    for (const key in items) {
-      const item = items[key];
-      addresses.push(item.addressCompressed);
-      addresses.push(item.addressUnCompressed);
+      this.allKeyService.getData(this.page, this.limitPerPage).subscribe({
+        next: (batchItems) => {
+          // Add new items to processed items
+          this.processedItems = [...this.processedItems, ...batchItems];
+          this.foundAddresses = this.processedItems.length;
+          this.updateBalances();
+          this.sortItems();
+        },
+        error: (error) => {
+          console.error('Error processing batches:', error);
+          this.isError = true;
+          this.isLoadingResults = false;
+        },
+        complete: () => {
+          this.items = this.processedItems;
+          this.isLoadingResults = false;
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      this.isError = true;
+      this.isLoadingResults = false;
     }
+  }
 
-    const balanceList = await firstValueFrom(
-      this.balanceService.getBalance(addresses)
-    );
+  private updateBalances() {
+    let pageTotal = 0;
+    for (const item of this.processedItems) {
+      pageTotal += (item.addressCompressedBalance || 0) + (item.addressUnCompressedBalance || 0);
+    }
+    this.totalBalance = pageTotal;
+  }
 
-    this.items = this.items.map((item) => {
-      item.addressCompressedBalance = this.getBalance(
-        item.addressCompressed,
-        balanceList,
-        'final_balance'
-      );
-      item.addressCompressedReceived = this.getBalance(
-        item.addressCompressed,
-        balanceList,
-        'total_received'
-      );
-      item.addressUnCompressedBalance = this.getBalance(
-        item.addressUnCompressed,
-        balanceList,
-        'final_balance'
-      );
-      item.addressUnCompressedReceived = this.getBalance(
-        item.addressUnCompressed,
-        balanceList,
-        'total_received'
-      );
-      return item;
-    });
-
-    // Sort items with balance to top
-    this.items.sort((a, b) => {
+  private sortItems() {
+    this.processedItems.sort((a, b) => {
       const aHasBalance = (a.addressCompressedBalance || 0) + (a.addressUnCompressedBalance || 0) > 0;
       const bHasBalance = (b.addressCompressedBalance || 0) + (b.addressUnCompressedBalance || 0) > 0;
+
       if (aHasBalance && !bHasBalance) return -1;
       if (!aHasBalance && bHasBalance) return 1;
+
+      // If both have no balance, check for transaction history
+      if (!aHasBalance && !bHasBalance) {
+        const aHasHistory = a.addressCompressedHasTransactions || a.addressUnCompressedHasTransactions;
+        const bHasHistory = b.addressCompressedHasTransactions || b.addressUnCompressedHasTransactions;
+        if (aHasHistory && !bHasHistory) return -1;
+        if (!aHasHistory && bHasHistory) return 1;
+      }
+
       return 0;
     });
-
-    this.isLoadingResults = false;
   }
 
-  getBalance(
-    address: string,
-    balanceList: IBlockchain[],
-    type: 'final_balance' | 'total_received'
-  ): number {
-    const balance = balanceList[address as any];
-    return balance ? balance[type] : 0;
+  getBalanceClass(balance: number | null | undefined): string {
+    if ((balance || 0) > 0) return 'text-green-600 font-semibold';
+    return 'text-slate-400';
   }
 
-  getBalanceClass(balance: number | null) {
-    return balance ? 'text-slate-900' : 'text-slate-400';
+  getTransactionClass(hasTransactions: boolean | undefined): string {
+    return hasTransactions ? 'text-green-600' : 'text-slate-400';
   }
 
   async copyToClipboard(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      // Optional: Add a visual feedback that copying succeeded
+      // Could add a toast notification here
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
+  }
+
+  getProgressStatus(): string {
+    if (this.foundAddresses === 0) {
+      return 'Scanning addresses...';
+    }
+    return `Found ${this.foundAddresses} addresses with activity`;
+  }
+
+  shouldShowBatchProgress(): boolean {
+    return this.batchProgress > 0 && this.batchProgress < 100;
   }
 }
