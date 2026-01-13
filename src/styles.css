@@ -1,0 +1,10 @@
+/* src/styles.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass {
+    @apply bg-zinc-900/50 backdrop-blur-sm border border-zinc-800;
+  }
+}

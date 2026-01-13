@@ -1,0 +1,122 @@
+<!-- src/app/pages/explorer/explorer.component.html -->
+<app-layout>
+  <div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold text-white">Key Explorer</h1>
+        <p class="text-sm text-zinc-500 mt-1">Generate random keys and check balances in batches</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button *ngIf="!isRunning" (click)="start()" class="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 rounded-xl text-sm font-medium text-white shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Start
+        </button>
+        <button *ngIf="isRunning" (click)="stop()" class="px-6 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-xl text-sm font-medium text-red-400 transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+          Stop
+        </button>
+        <button (click)="clear()" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-medium text-zinc-300 transition-colors">Clear</button>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="text-sm text-zinc-400">Chain:</span>
+        <div class="flex gap-2">
+          <button *ngFor="let chain of chains" (click)="selectChain(chain)" [disabled]="isRunning" class="px-4 py-2 rounded-lg text-sm font-medium transition-all" [class.bg-orange-500]="selectedChain === chain" [class.text-white]="selectedChain === chain" [class.bg-zinc-800]="selectedChain !== chain" [class.text-zinc-400]="selectedChain !== chain" [class.hover:bg-zinc-700]="selectedChain !== chain" [class.opacity-50]="isRunning && selectedChain !== chain">
+            {{ chainNames[chain] }}
+          </button>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <span class="text-xs text-zinc-500">Batch:</span>
+          <input type="number" [(ngModel)]="batchSize" min="1" max="50" [disabled]="isRunning" class="w-16 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-sm text-center disabled:opacity-50">
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">Keys Checked</div>
+        <div class="text-2xl font-semibold text-white mt-1">{{ keysChecked | number }}</div>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">With Balance</div>
+        <div class="text-2xl font-semibold text-emerald-400 mt-1">{{ keysWithBalance | number }}</div>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">Total Found</div>
+        <div class="text-2xl font-semibold text-amber-400 mt-1">{{ formatBalance(totalFound) }}</div>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">Notifications</div>
+        <div class="text-2xl font-semibold text-purple-400 mt-1">{{ notificationsSent | number }}</div>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">Status</div>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="isRunning" [class.animate-pulse]="isRunning" [class.bg-zinc-600]="!isRunning"></span>
+          <span class="text-sm" [class.text-emerald-400]="isRunning" [class.text-zinc-500]="!isRunning">{{ isRunning ? 'Running' : 'Stopped' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentStatus" class="glass rounded-xl p-3">
+      <div class="flex items-center gap-2 text-sm">
+        <svg *ngIf="isRunning" class="w-4 h-4 text-orange-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span [class.text-emerald-400]="currentStatus.includes('BALANCE')" [class.font-semibold]="currentStatus.includes('BALANCE')" [class.text-zinc-400]="!currentStatus.includes('BALANCE')">{{ currentStatus }}</span>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl overflow-hidden">
+      <div class="p-4 border-b border-zinc-800">
+        <h2 class="font-medium text-white">Keys with Balance ({{ entries.length }})</h2>
+      </div>
+      <div *ngIf="entries.length === 0" class="p-8 text-center text-zinc-500">
+        <svg class="w-12 h-12 mx-auto mb-3 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <p>No keys with balance found yet</p>
+        <p class="text-sm text-zinc-600 mt-1">Start scanning to find addresses with funds</p>
+      </div>
+      <div class="max-h-[600px] overflow-y-auto">
+        <div *ngFor="let entry of entries" class="border-b border-zinc-800 last:border-0 bg-emerald-500/5">
+          <div class="p-4 space-y-3">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0 flex-1 space-y-2">
+                <div>
+                  <div class="text-xs text-zinc-500 mb-1">Private Key (HEX)</div>
+                  <div class="flex items-center gap-2">
+                    <code class="text-xs font-mono text-amber-400 truncate">{{ entry.privateKeyHex }}</code>
+                    <button (click)="copyToClipboard(entry.privateKeyHex)" class="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors shrink-0">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="entry.privateKeyWif">
+                  <div class="text-xs text-zinc-500 mb-1">Private Key (WIF)</div>
+                  <div class="flex items-center gap-2">
+                    <code class="text-xs font-mono text-orange-400 truncate">{{ entry.privateKeyWif }}</code>
+                    <button (click)="copyToClipboard(entry.privateKeyWif || '')" class="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors shrink-0">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold shrink-0">{{ formatBalance(entry.totalBalance) }} {{ selectedChain | uppercase }}</span>
+            </div>
+            <div class="space-y-2">
+              <div *ngFor="let addr of entry.addresses" class="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded-lg" [class.bg-emerald-500]="addr.balance > 0" [class.bg-opacity-10]="addr.balance > 0" [class.ring-1]="addr.balance > 0" [class.ring-emerald-500]="addr.balance > 0" [class.ring-opacity-30]="addr.balance > 0" [class.bg-black]="addr.balance === 0" [class.bg-opacity-30]="addr.balance === 0">
+                <span class="text-xs text-zinc-500 shrink-0 w-24">{{ addressLabels[addr.type] }}</span>
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <a [href]="getExplorerUrl(addr.chain, addr.address)" target="_blank" class="text-xs font-mono text-blue-400 hover:text-blue-300 truncate">{{ addr.address }}</a>
+                  <button (click)="copyToClipboard(addr.address)" class="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors shrink-0">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  </button>
+                </div>
+                <span *ngIf="addr.balance > 0" class="text-xs font-mono text-emerald-400 font-semibold shrink-0">{{ formatBalance(addr.balance) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-layout>

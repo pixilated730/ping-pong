@@ -1,0 +1,27 @@
+<!-- src/app/components/layout/layout.component.html -->
+<div class="min-h-screen flex flex-col">
+  <header class="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a routerLink="/" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <span class="font-semibold text-lg text-white">Cryptic Hunters</span>
+      </a>
+      <nav class="flex items-center gap-1">
+        <a routerLink="/" routerLinkActive="bg-zinc-800 text-white" [routerLinkActiveOptions]="{exact: true}" class="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors">Explorer</a>
+        <a routerLink="/import" routerLinkActive="bg-zinc-800 text-white" class="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors">Import</a>
+      </nav>
+    </div>
+  </header>
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <ng-content></ng-content>
+  </main>
+  <footer class="border-t border-zinc-800 py-4">
+    <div class="max-w-7xl mx-auto px-4 text-center text-sm text-zinc-600">
+      Multi-chain key explorer - BTC, ETH, SOL
+    </div>
+  </footer>
+</div>
